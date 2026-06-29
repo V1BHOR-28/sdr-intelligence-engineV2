@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  image     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  analyses  Analysis[]
+  account   Account?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  provider          String  @default("credentials")
+  providerAccountId String  @unique
+  createdAt         DateTime @default(now())
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Analysis {
+  id           String   @id @default(cuid())
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // The raw transcript the user submitted
+  transcript   String
+
+  // The full structured AI result, stored as JSON
+  // (SQLite doesn't support nested types — we use a Json-like String column)
+  title            String
+  sentiment        String   // hot | warm | cold | negative
+  dealStage        String   // Discovery | Qualified | ...
+  summary          String
+  estimatedValue   String?
+
+  // JSON-encoded string fields for arrays and objects
+  objections       String   // JSON: string[]
+  competitors      String   // JSON: string[]
+  crmSummary       String   // JSON: string[]
+  actionPlan       String   // JSON: string[]
+  keyInsights      String   // JSON: string[]
+  nextSteps        String   // JSON: string[]
+  followUpEmail    String   // JSON: { subject, body }
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  theme           String   @default("dark") // dark | light
+  autoSaveAnalyses Boolean  @default(true)
+  preferredIndustry String @default("Any")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
